@@ -46,17 +46,6 @@ impl Buffer {
         }
     }
 
-    pub fn resize(&mut self, size: (usize, usize)) {
-        let len = size.0 * size.1;
-        if self.cells.len() > len {
-            self.cells.truncate(len);
-        } else {
-            self.cells.resize(len, Default::default())
-        }
-
-        self.size = size;
-    }
-
     pub fn reset(&mut self) {
         for cell in &mut self.cells {
             cell.reset();

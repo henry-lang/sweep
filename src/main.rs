@@ -18,12 +18,14 @@ fn main() -> crossterm::Result<()> {
     enable_raw_mode()?;
     let (w, h) = terminal::size()?;
     let (w, h) = (w as usize, h as usize);
+    let board_size @ (board_w, board_h) = ((w - 2) / 2, h - 2);
 
-    let board = Board::generate(((w - 2) / 2, h - 2), Difficulty::Easy);
+    let board = Board::generate(board_size, Difficulty::Easy);
     let mut stdout = stdout();
-    stdout.execute(terminal::Clear(ClearType::All))?;
+    stdout.execute(terminal::EnterAlternateScreen)?;
 
     let mut screen = Screen::new(stdout, (w as usize, h as usize))?;
+    let mut selection = (0usize, 0usize);
 
     loop {
         for c in 0..w {
@@ -41,26 +43,54 @@ fn main() -> crossterm::Result<()> {
         screen.set_content(0, h - 1, '┗');
         screen.set_content(w - 1, h - 1, '┛');
 
-        for (i, s) in board.squares.iter().enumerate() {
-            screen.set(
-                i % ((w - 2) / 2) * 2 + 1,
-                i / ((w - 2) / 2) + 1,
-                *s
-            )
+        for (i, square) in board.squares.iter().enumerate() {
+            screen.set(i % board_w * 2 + 1, i / board_w + 1, *square)
         }
 
-        screen.flush()?;
+        screen.flush((selection.0 * 2 + 1, selection.1 + 1))?;
 
         match event::read()? {
             Event::Key(key) => match key.code {
                 KeyCode::Char('q') => break,
-                KeyCode::Char(' ') => println!("Space bar"),
+                KeyCode::Char(' ') => {}
+                KeyCode::Up => {
+                    if selection.1 == 0 {
+                        selection.1 = board_h - 1;
+                    } else {
+                        selection.1 -= 1;
+                    }
+                }
+                KeyCode::Down => {
+                    if selection.1 == board_h - 1 {
+                        selection.1 = 0;
+                    } else {
+                        selection.1 += 1;
+                    }
+                }
+                KeyCode::Left => {
+                    if selection.0 == 0 {
+                        selection.0 = board_w - 1
+                    } else {
+                        selection.0 -= 1;
+                    }
+                }
+                KeyCode::Right => {
+                    if selection.0 == board_w - 1 {
+                        selection.0 = 0;
+                    } else {
+                        selection.0 += 1;
+                    }
+                }
                 _ => {}
             },
+            // Resizing currently just ends it, as the board can't resize during a game
+            Event::Resize(_, _) => break,
             _ => {}
         }
     }
 
     disable_raw_mode()?;
+    std::io::stdout().execute(terminal::LeaveAlternateScreen)?;
+    println!("{selection:?}");
     Ok(())
 }

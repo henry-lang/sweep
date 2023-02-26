@@ -26,13 +26,6 @@ impl<W: Write> Screen<W> {
         })
     }
 
-    pub fn resize(&mut self, size: (usize, usize)) {
-        self.buffers[0].resize(size);
-        self.buffers[1].resize(size);
-        self.size = size;
-        self.reset();
-    }
-
     pub fn reset(&mut self) {
         self.buffers[1 - self.current].reset();
     }
@@ -51,7 +44,7 @@ impl<W: Write> Screen<W> {
         self.buffers[self.current].cells[col + row * self.size.0] = to.into();
     }
 
-    pub fn flush(&mut self) -> io::Result<()> {
+    pub fn flush(&mut self, cursor: (usize, usize)) -> io::Result<()> {
         let diff = self.buffers[self.current].diff(&self.buffers[1 - self.current]);
         let mut fg = Color::Reset;
         let mut bg = Color::Reset;
@@ -89,8 +82,8 @@ impl<W: Write> Screen<W> {
         self.buf
             .queue(style::SetForegroundColor(Color::Reset))?
             .queue(style::SetBackgroundColor(Color::Reset))?
-            .queue(style::SetAttribute(Attribute::Reset))?;
-        // .queue(cursor::MoveTo(self.cursor.0, self.cursor.1))?;
+            .queue(style::SetAttribute(Attribute::Reset))?
+            .queue(cursor::MoveTo(cursor.0 as u16, cursor.1 as u16))?;
 
         self.buffers[1 - self.current].reset();
         self.current = 1 - self.current;

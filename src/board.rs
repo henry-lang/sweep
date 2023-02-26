@@ -31,7 +31,7 @@ pub enum Content {
 pub struct Square {
     content: Content,
     flagged: bool,
-    visible: bool
+    visible: bool,
 }
 
 impl Square {
@@ -39,7 +39,7 @@ impl Square {
         Self {
             content,
             flagged: false,
-            visible: true
+            visible: true,
         }
     }
 }
@@ -47,21 +47,29 @@ impl Square {
 impl From<Square> for BufCell {
     fn from(square: Square) -> Self {
         match square {
-            Square {flagged: true, ..} => BufCell {
+            Square { flagged: true, .. } => BufCell {
                 content: '🏳',
                 fg: Color::Red,
                 ..Default::default()
             },
-            Square {visible: false, ..} => BufCell {
+            Square { visible: false, .. } => BufCell {
                 content: '.',
                 ..Default::default()
             },
-            Square {visible: true, content: Content::Empty(0), ..} => BufCell {
+            Square {
+                visible: true,
+                content: Content::Empty(0),
+                ..
+            } => BufCell {
                 content: '.',
                 fg: Color::DarkGrey,
                 ..Default::default()
             },
-            Square {visible: true, content: Content::Empty(adj), ..} => BufCell {
+            Square {
+                visible: true,
+                content: Content::Empty(adj),
+                ..
+            } => BufCell {
                 content: (adj + b'0') as char,
                 fg: match adj {
                     0 => unreachable!(),
@@ -72,7 +80,11 @@ impl From<Square> for BufCell {
                 },
                 ..Default::default()
             },
-            Square {visible: true, content: Content::Bomb, ..} => BufCell {
+            Square {
+                visible: true,
+                content: Content::Bomb,
+                ..
+            } => BufCell {
                 content: '*',
                 fg: Color::Black,
                 bg: Color::Red,
@@ -84,7 +96,7 @@ impl From<Square> for BufCell {
 
 pub struct Board {
     size: (usize, usize),
-    pub squares: Vec<Square>
+    pub squares: Vec<Square>,
 }
 
 impl Board {
@@ -128,9 +140,6 @@ impl Board {
             }
         }
 
-        Self {
-            size,
-            squares,
-        }
+        Self { size, squares }
     }
 }
