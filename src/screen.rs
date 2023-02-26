@@ -14,6 +14,7 @@ pub struct Screen<W: Write> {
     buffers: [Buffer; 2],
     current: usize, // Current buffer used for rendering
     size: (usize, usize),
+    cursor: (u16, u16),
 }
 
 impl<W: Write> Screen<W> {
@@ -23,6 +24,7 @@ impl<W: Write> Screen<W> {
             buffers: [Buffer::empty(size), Buffer::empty(size)],
             current: 0,
             size,
+            cursor: crossterm::cursor::position()?,
         })
     }
 
@@ -41,6 +43,10 @@ impl<W: Write> Screen<W> {
         for cell in self.buffers[self.current].cells.iter_mut() {
             *cell = *with;
         }
+    }
+
+    pub fn move_cursor_to(&mut self, c: u16, r: u16) {
+        self.cursor = (c, r);
     }
 
     pub fn flush(&mut self) -> io::Result<()> {
@@ -81,7 +87,8 @@ impl<W: Write> Screen<W> {
         self.buf
             .queue(style::SetForegroundColor(Color::Reset))?
             .queue(style::SetBackgroundColor(Color::Reset))?
-            .queue(style::SetAttribute(Attribute::Reset))?;
+            .queue(style::SetAttribute(Attribute::Reset))?
+            .queue(cursor::MoveTo(self.cursor.0, self.cursor.1))?;
 
         self.buffers[1 - self.current].reset();
         self.current = 1 - self.current;

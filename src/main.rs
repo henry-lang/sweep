@@ -1,7 +1,10 @@
 use std::io::stdout;
 
 use buffer::BufCell;
-use crossterm::terminal::{self, disable_raw_mode, enable_raw_mode};
+use crossterm::{
+    event::{self, Event, KeyCode},
+    terminal::{self, disable_raw_mode, enable_raw_mode},
+};
 use tinyrand::{Rand, StdRand};
 
 use crate::screen::Screen;
@@ -34,6 +37,7 @@ impl Difficulty {
 struct Board {
     size: (usize, usize),
     squares: Vec<Square>,
+    visible: Vec<bool>, // Ideally a BitVec would be used but there's no point
 }
 
 impl Board {
@@ -51,7 +55,7 @@ impl Board {
             let idx = col + row * w;
 
             squares[idx] = Square::Bomb;
-            
+
             for offset in [1, w, w - 1, w + 1] {
                 if let Some(i) = idx.checked_sub(offset) {
                     if let Square::Empty(ref mut adj) = squares[i] {
@@ -66,7 +70,11 @@ impl Board {
             }
         }
 
-        Self { size, squares }
+        Self {
+            size,
+            squares,
+            visible: vec![false; num_squares],
+        }
     }
 }
 
@@ -78,6 +86,17 @@ fn main() -> crossterm::Result<()> {
     let board = Board::generate((w - 2, h - 2), Difficulty::Easy);
 
     let mut screen = Screen::new(stdout(), (w as usize, h as usize))?;
+
+    loop {
+        match event::read()? {
+            Event::Key(key) => match key.code {
+                KeyCode::Char('q') => break,
+                KeyCode::Char(' ') => println!("Space bar"),
+                _ => {}
+            },
+            _ => {}
+        }
+    }
 
     disable_raw_mode()?;
     Ok(())
