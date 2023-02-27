@@ -1,8 +1,10 @@
 use std::io::stdout;
+use std::env::args;
 
 use board::{Board, Difficulty};
 use buffer::BufCell;
 use crossterm::{
+    cursor,
     event::{self, Event, KeyCode},
     terminal::{self, disable_raw_mode, enable_raw_mode, ClearType},
     ExecutableCommand,
@@ -15,17 +17,23 @@ mod buffer;
 mod screen;
 
 fn main() -> crossterm::Result<()> {
+    let difficulty = args().nth(1).map(|d| d.parse().unwrap_or_else(|_| {
+        println!("Invalid difficulty: {d}");
+        std::process::exit(1);
+    })).unwrap_or(Difficulty::Medium);
+
     enable_raw_mode()?;
     let (w, h) = terminal::size()?;
-    let (w, h) = (w as usize, h as usize);
+    let term_size @ (w, h) = (w as usize, h as usize);
     let board_size @ (board_w, board_h) = ((w - 2) / 2, h - 2);
 
-    let mut board = Board::generate(board_size, Difficulty::Easy);
+    let mut board = Board::generate(board_size, difficulty);
     let mut stdout = stdout();
     stdout.execute(terminal::EnterAlternateScreen)?;
+    stdout.execute(cursor::SetCursorStyle::SteadyBlock)?;
     stdout.execute(terminal::Clear(ClearType::All))?;
 
-    let mut screen = Screen::new(stdout, (w as usize, h as usize))?;
+    let mut screen = Screen::new(stdout, term_size)?;
     let mut selection = (0usize, 0usize);
 
     loop {
@@ -53,38 +61,39 @@ fn main() -> crossterm::Result<()> {
         match event::read()? {
             Event::Key(key) => match key.code {
                 KeyCode::Char('q') => break,
-                KeyCode::Char(' ') => {}
-                KeyCode::Up => {
+                KeyCode::Char('k') | KeyCode::Up => {
                     if selection.1 == 0 {
                         selection.1 = board_h - 1;
                     } else {
                         selection.1 -= 1;
                     }
                 }
-                KeyCode::Down => {
+                KeyCode::Char('j') | KeyCode::Down => {
                     if selection.1 == board_h - 1 {
                         selection.1 = 0;
                     } else {
                         selection.1 += 1;
                     }
                 }
-                KeyCode::Left => {
+                KeyCode::Char('h') | KeyCode::Left => {
                     if selection.0 == 0 {
                         selection.0 = board_w - 1
                     } else {
                         selection.0 -= 1;
                     }
                 }
-                KeyCode::Right => {
+                KeyCode::Char('l') | KeyCode::Right => {
                     if selection.0 == board_w - 1 {
                         selection.0 = 0;
                     } else {
                         selection.0 += 1;
                     }
                 }
+                KeyCode::Char('f') => board.flag_square(selection),
                 _ => {}
             },
             // Resizing currently just ends it, as the board can't resize during a game
+            Event::Resize(_, _) => break,
             _ => {}
         }
     }
@@ -92,6 +101,6 @@ fn main() -> crossterm::Result<()> {
     disable_raw_mode()?;
     std::io::stdout().execute(terminal::LeaveAlternateScreen)?;
     std::io::stdout().execute(terminal::Clear(ClearType::All))?;
-    println!("{selection:?}");
+
     Ok(())
 }

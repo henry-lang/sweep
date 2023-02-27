@@ -3,7 +3,6 @@ use std::io::{self, Write};
 use crossterm::{
     cursor,
     style::{self, Attribute, Attributes, Color},
-    terminal::{self, enable_raw_mode},
     QueueableCommand,
 };
 

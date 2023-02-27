@@ -1,3 +1,4 @@
+use core::str::FromStr;
 use std::time::SystemTime;
 
 use crossterm::style::Color;
@@ -18,6 +19,19 @@ impl Difficulty {
             Difficulty::Medium => 0.15,
             Difficulty::Hard => 0.20,
         }
+    }
+}
+
+impl FromStr for Difficulty {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "easy" => Self::Easy,
+            "medium" => Self::Medium,
+            "hard" => Self::Hard,
+            _ => Err(())?
+        })
     }
 }
 
@@ -44,11 +58,13 @@ impl Square {
     }
 }
 
+const FLAG_UNICODE: bool = false;
+
 impl From<Square> for BufCell {
     fn from(square: Square) -> Self {
         match square {
             Square { flagged: true, .. } => BufCell {
-                content: '🏳',
+                content: if FLAG_UNICODE { '🏳' } else { 'F' },
                 fg: Color::Red,
                 ..Default::default()
             },
@@ -96,13 +112,27 @@ impl From<Square> for BufCell {
 
 pub struct Board {
     size: (usize, usize),
+    num_bombs: usize,
+    flagged_squares: usize, // How many squares in general have been flagged
+    flagged_bombs: usize,   // How many bombs in specific have been flagged
     pub squares: Vec<Square>,
 }
 
 impl Board {
+    pub fn square(&self, pos: (usize, usize)) -> Square {
+        let (col, row) = pos;
+        self.squares[col + row * self.size.0]
+    }
+
+    pub fn square_mut(&mut self, pos: (usize, usize)) -> &mut Square {
+        let (col, row) = pos;
+        &mut self.squares[col + row * self.size.0]
+    }
+
     pub fn generate(size: (usize, usize), difficulty: Difficulty) -> Self {
         let (w, h) = size;
         let num_squares = w * h;
+        let num_bombs = 3;
         let num_bombs = (difficulty.percentage_bombs() * num_squares as f32) as usize;
 
         let mut rng = StdRand::seed(
@@ -140,6 +170,35 @@ impl Board {
             }
         }
 
-        Self { size, squares }
+        Self {
+            size,
+            num_bombs,
+            flagged_bombs: 0,
+            flagged_squares: 0,
+            squares,
+        }
+    }
+
+    // For now, we won't return an Option<GameEnding> or whatever
+    pub fn flag_square(&mut self, pos: (usize, usize)) {
+        let square = self.square(pos);
+
+        if self.flagged_squares == self.num_bombs && !square.flagged {
+            return;
+        }
+        if square.flagged {
+            self.flagged_squares -= 1;
+        } else {
+            self.flagged_squares += 1;
+        }
+
+        self.square_mut(pos).flagged ^= true;
+
+        if let Content::Bomb = self.square(pos).content {
+            self.flagged_bombs += 1;
+            if self.flagged_bombs == self.num_bombs {
+                // Indicate that the game has been won
+            }
+        }
     }
 }
