@@ -1,5 +1,5 @@
 use core::str::FromStr;
-use std::time::SystemTime;
+use std::{time::SystemTime, collections::VecDeque};
 
 use crossterm::style::Color;
 use tinyrand::{Rand, Seeded, StdRand};
@@ -7,6 +7,7 @@ use tinyrand::{Rand, Seeded, StdRand};
 use crate::buffer::BufCell;
 
 pub enum Difficulty {
+    Debug,
     Easy,
     Medium,
     Hard,
@@ -15,6 +16,7 @@ pub enum Difficulty {
 impl Difficulty {
     pub fn percentage_bombs(self) -> f32 {
         match self {
+            Difficulty::Debug => 0.01,
             Difficulty::Easy => 0.10,
             Difficulty::Medium => 0.15,
             Difficulty::Hard => 0.20,
@@ -27,6 +29,7 @@ impl FromStr for Difficulty {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s {
+            "debug" => Self::Debug,
             "easy" => Self::Easy,
             "medium" => Self::Medium,
             "hard" => Self::Hard,
@@ -42,18 +45,23 @@ pub enum Content {
 }
 
 #[derive(Copy, Clone)]
+enum Visibility {
+    Flagged,
+    Uncovered,
+    Covered
+}
+
+#[derive(Copy, Clone)]
 pub struct Square {
     content: Content,
-    flagged: bool,
-    visible: bool,
+    visibility: Visibility
 }
 
 impl Square {
     pub fn new(content: Content) -> Self {
         Self {
             content,
-            flagged: false,
-            visible: true,
+            visibility: Visibility::Covered
         }
     }
 }
@@ -63,17 +71,17 @@ const FLAG_UNICODE: bool = false;
 impl From<Square> for BufCell {
     fn from(square: Square) -> Self {
         match square {
-            Square { flagged: true, .. } => BufCell {
+            Square { visibility: Visibility::Flagged, .. } => BufCell {
                 content: if FLAG_UNICODE { '🏳' } else { 'F' },
                 fg: Color::Red,
                 ..Default::default()
             },
-            Square { visible: false, .. } => BufCell {
+            Square { visibility: Visibility::Covered, .. } => BufCell {
                 content: '.',
                 ..Default::default()
             },
             Square {
-                visible: true,
+                visibility: Visibility::Uncovered,
                 content: Content::Empty(0),
                 ..
             } => BufCell {
@@ -82,7 +90,7 @@ impl From<Square> for BufCell {
                 ..Default::default()
             },
             Square {
-                visible: true,
+                visibility: Visibility::Uncovered,
                 content: Content::Empty(adj),
                 ..
             } => BufCell {
@@ -97,7 +105,7 @@ impl From<Square> for BufCell {
                 ..Default::default()
             },
             Square {
-                visible: true,
+                visibility: Visibility::Uncovered,
                 content: Content::Bomb,
                 ..
             } => BufCell {
@@ -183,22 +191,53 @@ impl Board {
     pub fn flag_square(&mut self, pos: (usize, usize)) {
         let square = self.square(pos);
 
-        if self.flagged_squares == self.num_bombs && !square.flagged {
-            return;
-        }
-        if square.flagged {
-            self.flagged_squares -= 1;
-        } else {
-            self.flagged_squares += 1;
-        }
-
-        self.square_mut(pos).flagged ^= true;
-
-        if let Content::Bomb = self.square(pos).content {
-            self.flagged_bombs += 1;
-            if self.flagged_bombs == self.num_bombs {
-                // Indicate that the game has been won
+        match square.visibility {
+            Visibility::Uncovered => return,
+            Visibility::Flagged => {
+                if let Content::Bomb = square.content {
+                    self.flagged_bombs -= 1;
+                }
+                self.square_mut(pos).visibility = Visibility::Covered;
+                self.flagged_squares -= 1;
             }
+            Visibility::Covered if self.flagged_squares < self.num_bombs => {
+                if let Content::Bomb = square.content {
+                    self.flagged_bombs += 1;
+                }
+
+                self.square_mut(pos).visibility = Visibility::Flagged;
+                self.flagged_squares += 1;
+            }
+            _ => {}
+        }
+    }
+
+    pub fn uncover_square(&mut self, pos: (usize, usize)) {
+        if let Content::Empty(0) = self.square(pos).content {
+            let mut queue = VecDeque::from([pos]);
+
+            while let Some(next) = queue.pop_front() {
+                if !matches!(self.square(next).content, Content::Empty(0)) {
+                    continue;
+                }
+                self.square_mut(pos).visibility = Visibility::Uncovered;
+
+                if next.0 > 0 && matches!(self.square((next.0 - 1, next.1)).content, Content::Empty(0)) {
+                    queue.push_back((next.0 - 1, next.1));
+                }
+                if next.0 < self.size.0 - 1 && matches!(self.square((next.0 + 1, next.1)).content, Content::Empty(0)) {
+                    queue.push_back((next.0 + 1, next.1));
+                }
+                if next.1 > 0 && matches!(self.square((next.0, next.1 - 1)).content, Content::Empty(0)) {
+                    queue.push_back((next.0, next.1 - 1));
+                }
+
+                if next.1 > self.size.1 - 1 && matches!(self.square((next.0, next.1 + 1)).content, Content::Empty(0)) {
+                    queue.push_back((next.0, next.1 + 1));
+                }
+            }
+        } else {
+            self.square_mut(pos).visibility = Visibility::Uncovered;
         }
     }
 }

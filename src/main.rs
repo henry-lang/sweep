@@ -90,6 +90,7 @@ fn main() -> crossterm::Result<()> {
                     }
                 }
                 KeyCode::Char('f') => board.flag_square(selection),
+                KeyCode::Char(' ') => board.uncover_square(selection),
                 _ => {}
             },
             // Resizing currently just ends it, as the board can't resize during a game
