@@ -51,9 +51,6 @@ impl<W: Write> Screen<W> {
         let mut attrs = Attributes::default();
         let mut last_pos: Option<(usize, usize)> = None;
 
-        self.buf
-            .queue(terminal::Clear(terminal::ClearType::Purge))?;
-
         for (col, row, cell) in diff {
             if !matches!(last_pos, Some(p) if col == p.0 + 1 && row == p.1) {
                 self.buf.queue(cursor::MoveTo(col as u16, row as u16))?;

@@ -20,9 +20,10 @@ fn main() -> crossterm::Result<()> {
     let (w, h) = (w as usize, h as usize);
     let board_size @ (board_w, board_h) = ((w - 2) / 2, h - 2);
 
-    let board = Board::generate(board_size, Difficulty::Easy);
+    let mut board = Board::generate(board_size, Difficulty::Easy);
     let mut stdout = stdout();
     stdout.execute(terminal::EnterAlternateScreen)?;
+    stdout.execute(terminal::Clear(ClearType::All))?;
 
     let mut screen = Screen::new(stdout, (w as usize, h as usize))?;
     let mut selection = (0usize, 0usize);
@@ -84,13 +85,13 @@ fn main() -> crossterm::Result<()> {
                 _ => {}
             },
             // Resizing currently just ends it, as the board can't resize during a game
-            Event::Resize(_, _) => break,
             _ => {}
         }
     }
 
     disable_raw_mode()?;
     std::io::stdout().execute(terminal::LeaveAlternateScreen)?;
+    std::io::stdout().execute(terminal::Clear(ClearType::All))?;
     println!("{selection:?}");
     Ok(())
 }
