@@ -1,5 +1,5 @@
 use core::str::FromStr;
-use std::{time::SystemTime, collections::VecDeque};
+use std::{time::SystemTime, collections::{VecDeque, HashSet}};
 
 use crossterm::style::Color;
 use tinyrand::{Rand, Seeded, StdRand};
@@ -215,24 +215,28 @@ impl Board {
     pub fn uncover_square(&mut self, pos: (usize, usize)) {
         if let Content::Empty(0) = self.square(pos).content {
             let mut queue = VecDeque::from([pos]);
+            let mut visited = HashSet::new();
 
             while let Some(next) = queue.pop_front() {
+                self.square_mut(next).visibility = Visibility::Uncovered;
+                visited.insert(next);
                 if !matches!(self.square(next).content, Content::Empty(0)) {
                     continue;
                 }
-                self.square_mut(pos).visibility = Visibility::Uncovered;
 
-                if next.0 > 0 && matches!(self.square((next.0 - 1, next.1)).content, Content::Empty(0)) {
+                // println!("{:?}", visited);
+
+                if next.0 > 0 && !visited.contains(&(next.0 - 1, next.1)) {
                     queue.push_back((next.0 - 1, next.1));
                 }
-                if next.0 < self.size.0 - 1 && matches!(self.square((next.0 + 1, next.1)).content, Content::Empty(0)) {
+                if next.0 < self.size.0 - 1 && !visited.contains(&(next.0 + 1, next.1)) {
                     queue.push_back((next.0 + 1, next.1));
                 }
-                if next.1 > 0 && matches!(self.square((next.0, next.1 - 1)).content, Content::Empty(0)) {
+                if next.1 > 0 && !visited.contains(&(next.0, next.1 - 1)) {
                     queue.push_back((next.0, next.1 - 1));
                 }
 
-                if next.1 > self.size.1 - 1 && matches!(self.square((next.0, next.1 + 1)).content, Content::Empty(0)) {
+                if next.1 < self.size.1 - 1 && !visited.contains(&(next.0, next.1 + 1)) {
                     queue.push_back((next.0, next.1 + 1));
                 }
             }
