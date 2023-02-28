@@ -140,48 +140,42 @@ impl Board {
         let num_squares = w * h;
         let num_bombs = (difficulty.percentage_bombs() * num_squares as f32) as usize;
 
+        let mut board = Self {
+            size,
+            num_bombs,
+            flagged_squares: 0,
+            flagged_bombs: 0,
+            squares: vec![Square::new(Content::Empty(0)); num_squares]
+        };
+
         let mut rng = StdRand::seed(
             SystemTime::now()
                 .duration_since(SystemTime::UNIX_EPOCH)
                 .expect("get system time for random")
                 .as_secs(),
         );
-        let mut squares = vec![Square::new(Content::Empty(0)); num_squares];
 
         for _ in 0..num_bombs {
-            let idx = loop {
-                let col = rng.next_lim_usize(w);
-                let row = rng.next_lim_usize(h);
-                let idx = col + row * w;
-                if let Content::Bomb = squares[idx].content {
+            let pos = loop {
+                let pos = (rng.next_lim_usize(w), rng.next_lim_usize(h));
+                if let Content::Bomb = board.square(pos).content {
                     continue;
                 }
-                break idx;
+                break pos;
             };
 
-            squares[idx] = Square::new(Content::Bomb);
+            board.square_mut(pos).content = Content::Bomb;
 
-            for offset in [1, w, w - 1, w + 1] {
-                if let Some(i) = idx.checked_sub(offset) {
-                    if let Content::Empty(ref mut adj) = squares[i].content {
-                        *adj += 1;
-                    }
-                }
-                if idx + offset < num_squares {
-                    if let Content::Empty(ref mut adj) = squares[idx + offset].content {
+            for c in pos.0.saturating_sub(1)..=(pos.0 + 1).min(board.size.0 - 1) {
+                for r in pos.1.saturating_sub(1)..=(pos.1 + 1).min(board.size.1 - 1) {
+                    if let Content::Empty(ref mut adj) = board.square_mut((c, r)).content {
                         *adj += 1;
                     }
                 }
             }
         }
-
-        Self {
-            size,
-            num_bombs,
-            flagged_bombs: 0,
-            flagged_squares: 0,
-            squares,
-        }
+        
+        board
     }
 
     // For now, we won't return an Option<GameEnding> or whatever
