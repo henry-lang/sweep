@@ -116,6 +116,9 @@ impl From<Square> for BufCell {
     }
 }
 
+pub type Loses = bool;
+pub type Wins = bool;
+
 pub struct Board {
     size: (usize, usize),
     num_bombs: usize,
@@ -125,6 +128,14 @@ pub struct Board {
 }
 
 impl Board {
+    pub fn width(&self) -> usize {
+        self.size.0
+    }
+
+    pub fn height(&self) -> usize {
+        self.size.1
+    }
+
     pub fn square(&self, pos: (usize, usize)) -> Square {
         let (col, row) = pos;
         self.squares[col + row * self.size.0]
@@ -178,12 +189,11 @@ impl Board {
         board
     }
 
-    // For now, we won't return an Option<GameEnding> or whatever
-    pub fn flag_square(&mut self, pos: (usize, usize)) {
+    pub fn flag_square(&mut self, pos: (usize, usize)) -> Wins {
         let square = self.square(pos);
 
         match square.visibility {
-            Visibility::Uncovered => return,
+            Visibility::Uncovered => {},
             Visibility::Flagged => {
                 if let Content::Bomb = square.content {
                     self.flagged_bombs -= 1;
@@ -201,9 +211,11 @@ impl Board {
             }
             _ => {}
         }
+
+        self.flagged_bombs == self.num_bombs
     }
 
-    pub fn uncover_square(&mut self, pos: (usize, usize)) {
+    pub fn uncover_square(&mut self, pos: (usize, usize)) -> Loses {
         if let Content::Empty(0) = self.square(pos).content {
             // Possibly make this better somehow - just doing a dfs thing rn
             let mut queue = VecDeque::from([pos]);
@@ -238,5 +250,7 @@ impl Board {
         } else {
             self.square_mut(pos).visibility = Visibility::Uncovered;
         }
+
+        matches!(self.square(pos).content, Content::Bomb)
     }
 }
