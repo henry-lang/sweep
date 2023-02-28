@@ -66,13 +66,11 @@ impl Square {
     }
 }
 
-const FLAG_UNICODE: bool = false;
-
 impl From<Square> for BufCell {
     fn from(square: Square) -> Self {
         match square {
             Square { visibility: Visibility::Flagged, .. } => BufCell {
-                content: if FLAG_UNICODE { '🏳' } else { 'F' },
+                content: 'F',
                 fg: Color::Red,
                 ..Default::default()
             },
@@ -140,7 +138,6 @@ impl Board {
     pub fn generate(size: (usize, usize), difficulty: Difficulty) -> Self {
         let (w, h) = size;
         let num_squares = w * h;
-        let num_bombs = 3;
         let num_bombs = (difficulty.percentage_bombs() * num_squares as f32) as usize;
 
         let mut rng = StdRand::seed(
@@ -215,11 +212,10 @@ impl Board {
     pub fn uncover_square(&mut self, pos: (usize, usize)) {
         if let Content::Empty(0) = self.square(pos).content {
             let mut queue = VecDeque::from([pos]);
-            let mut visited = HashSet::new();
+            let mut visited = HashSet::from([pos]);
 
             while let Some(next) = queue.pop_front() {
                 self.square_mut(next).visibility = Visibility::Uncovered;
-                visited.insert(next);
                 if !matches!(self.square(next).content, Content::Empty(0)) {
                     continue;
                 }
@@ -228,16 +224,20 @@ impl Board {
 
                 if next.0 > 0 && !visited.contains(&(next.0 - 1, next.1)) {
                     queue.push_back((next.0 - 1, next.1));
+                    visited.insert((next.0 - 1, next.1));
                 }
                 if next.0 < self.size.0 - 1 && !visited.contains(&(next.0 + 1, next.1)) {
                     queue.push_back((next.0 + 1, next.1));
+                    visited.insert((next.0 + 1, next.1));
                 }
                 if next.1 > 0 && !visited.contains(&(next.0, next.1 - 1)) {
                     queue.push_back((next.0, next.1 - 1));
+                    visited.insert((next.0, next.1 - 1));
                 }
 
                 if next.1 < self.size.1 - 1 && !visited.contains(&(next.0, next.1 + 1)) {
                     queue.push_back((next.0, next.1 + 1));
+                    visited.insert((next.0, next.1 + 1));
                 }
             }
         } else {

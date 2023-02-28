@@ -2,7 +2,6 @@ use std::io::stdout;
 use std::env::args;
 
 use board::{Board, Difficulty};
-use buffer::BufCell;
 use crossterm::{
     cursor,
     event::{self, Event, KeyCode},
@@ -34,7 +33,7 @@ fn main() -> crossterm::Result<()> {
     stdout.execute(terminal::Clear(ClearType::All))?;
 
     let mut screen = Screen::new(stdout, term_size)?;
-    let mut selection = (0usize, 0usize);
+    let mut selection = (board_w / 2, board_h / 2);
 
     loop {
         for c in 0..w {
