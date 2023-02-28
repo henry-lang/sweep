@@ -34,7 +34,7 @@ fn render(screen: &mut Screen<impl std::io::Write>, board: &Board, w: usize, h: 
     screen.set_content(w - 1, h - 1, '┛');
 
     for (i, square) in board.squares.iter().enumerate() {
-        screen.set(i % board.width() * 2 + 1, i / board.height() + 1, *square)
+        screen.set(i % board.width() * 2 + 1, i / board.width() + 1, *square)
     }
 }
 
@@ -102,7 +102,7 @@ fn main() -> crossterm::Result<()> {
                     std::thread::sleep(std::time::Duration::from_millis(500));
                     for off in 0..10 {
                         render(&mut screen, &board, w, h);
-                        for c in selection.0.saturating_sub(off)..=(selection.0 + off).min(w - 1) {
+                        for c in (selection.0 * 2 + 1).saturating_sub(off * 2)..=((selection.0 * 2 + 1) + off * 2).min(w - 1) {
                             for r in selection.1.saturating_sub(off)..=(selection.1 + off).min(h - 1) {
                                 screen.set(c, r, BufCell {content: ' ', bg: Color::Red, ..Default::default()})
                             }

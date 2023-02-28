@@ -227,24 +227,13 @@ impl Board {
                     continue;
                 }
 
-                // println!("{:?}", visited);
-
-                if next.0 > 0 && !visited.contains(&(next.0 - 1, next.1)) {
-                    queue.push_back((next.0 - 1, next.1));
-                    visited.insert((next.0 - 1, next.1));
-                }
-                if next.0 < self.size.0 - 1 && !visited.contains(&(next.0 + 1, next.1)) {
-                    queue.push_back((next.0 + 1, next.1));
-                    visited.insert((next.0 + 1, next.1));
-                }
-                if next.1 > 0 && !visited.contains(&(next.0, next.1 - 1)) {
-                    queue.push_back((next.0, next.1 - 1));
-                    visited.insert((next.0, next.1 - 1));
-                }
-
-                if next.1 < self.size.1 - 1 && !visited.contains(&(next.0, next.1 + 1)) {
-                    queue.push_back((next.0, next.1 + 1));
-                    visited.insert((next.0, next.1 + 1));
+                for c in next.0.saturating_sub(1)..=(next.0 + 1).min(self.size.0 - 1) {
+                    for r in next.1.saturating_sub(1)..=(next.1 + 1).min(self.size.1 - 1) {
+                        if !visited.contains(&(c, r)) {
+                            queue.push_back((c, r));
+                            visited.insert((c, r));
+                        }
+                    }
                 }
             }
         } else {
