@@ -211,6 +211,7 @@ impl Board {
 
     pub fn uncover_square(&mut self, pos: (usize, usize)) {
         if let Content::Empty(0) = self.square(pos).content {
+            // Possibly make this better somehow - just doing a dfs thing rn
             let mut queue = VecDeque::from([pos]);
             let mut visited = HashSet::from([pos]);
 
