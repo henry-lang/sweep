@@ -43,6 +43,12 @@ impl<W: Write> Screen<W> {
         self.buffers[self.current].cells[col + row * self.size.0] = to.into();
     }
 
+    pub fn write_text(&mut self, pos: (usize, usize), text: impl AsRef<str>) {
+        for (i, c) in text.as_ref().chars().enumerate() {
+            self.set_content(pos.0 + i, pos.1, c);
+        }
+    }
+
     pub fn flush(&mut self, cursor: (usize, usize)) -> io::Result<()> {
         let diff = self.buffers[self.current].diff(&self.buffers[1 - self.current]);
         let mut fg = Color::Reset;
